@@ -1,0 +1,106 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
+}
+
+dependencies {
+    implementation project(':TMessagesProj')
+    implementation files('../TMessagesProj/libs/libgsaverification-client.aar')
+}
+
+ext.abiCodes = ['universal': 0, 'armeabi-v7a': 1, 'arm64-v8a': 5, x86: 2, x86_64: 6]
+
+android {
+    namespace 'org.telegram.messenger.regular'
+    defaultConfig.applicationId = APP_PACKAGE
+
+    packagingOptions {
+        resources {
+            excludes += '**'
+        }
+    }
+
+    Properties signingProperties = new Properties()
+    if (project.rootProject.file('signing.properties').exists()) {
+        signingProperties.load(project.rootProject.file('signing.properties').newDataInputStream())
+    }
+
+    signingConfigs {
+        if (signingProperties.getProperty("storeFile") != null) {
+            sign {
+                storeFile file(signingProperties.getProperty("storeFile"))
+                storePassword signingProperties.getProperty("storePassword")
+                keyAlias signingProperties.getProperty("keyAlias")
+                keyPassword signingProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            if (signingProperties.getProperty("storeFile") != null) {
+                signingConfig signingConfigs.sign
+            }
+            jniDebuggable true
+            applicationIdSuffix ".beta"
+        }
+
+        pbeta {
+            minifyEnabled true
+            shrinkResources true
+            if (signingProperties.getProperty("storeFile") != null) {
+                signingConfig signingConfigs.sign
+            }
+            jniDebuggable true
+            proguardFiles '../TMessagesProj/proguard-rules.pro'
+            ndk.debugSymbolLevel 'FULL'
+        }
+
+        release {
+            minifyEnabled true
+            shrinkResources true
+            if (signingProperties.getProperty("storeFile") != null) {
+                signingConfig signingConfigs.sign
+            }
+            proguardFiles '../TMessagesProj/proguard-rules.pro'
+            ndk.debugSymbolLevel 'FULL'
+        }
+    }
+
+    defaultConfig.versionCode = Integer.parseInt(APP_VERSION_CODE)
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def abi = output.getFilter('ABI')
+            if (abi == null) abi = 'universal'
+            outputFileName = "OwlGram-${defaultConfig.versionName}-${defaultConfig.versionCode}-${abi}.apk"
+            def abiVersionCode = project.ext.abiCodes.get(abi)
+            output.versionCodeOverride = defaultConfig.versionCode * 10 + abiVersionCode
+        }
+    }
+
+    defaultConfig {
+        versionName APP_VERSION_NAME
+
+        multiDexEnabled true
+    }
+
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
+    splits.abi {
+        enable true
+        universalApk true
+    }
+
+    dependenciesInfo.includeInApk false
+}
+
+task("buildRelease") {
+    dependsOn("assembleRelease")
+    dependsOn("bundlePlay")
+}

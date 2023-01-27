@@ -1,0 +1,17 @@
+.idea/
+.gradle/
+.cxx/
+build/
+release/
+pbeta/
+TMessagesProj/play/
+*.iml
+*.apk
+local.properties
+signing.properties
+*.keystore
+*.jsk
+*.zip
+*.pepk
+google-services.json
+agconnect-services.json
